@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../config/supabase'
+import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
 
@@ -16,74 +17,56 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Mock user for demo purposes
-    const mockUser = localStorage.getItem('mockUser')
-    if (mockUser) {
-      setUser(JSON.parse(mockUser))
-    }
-    setLoading(false)
+    setLoading(true)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role, name')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (error) {
+            console.error('Error fetching profile:', error)
+            toast.error('Could not fetch user profile.')
+            setUser(session.user)
+          } else {
+            setUser({ ...session.user, ...profile })
+          }
+        } else {
+          setUser(null)
+        }
+        setLoading(false)
+      }
+    )
 
-    // For real Supabase integration, uncomment below:
-    // const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    //   async (event, session) => {
-    //     if (session?.user) {
-    //       setUser(session.user)
-    //     } else {
-    //       setUser(null)
-    //     }
-    //     setLoading(false)
-    //   }
-    // )
-
-    // return () => subscription?.unsubscribe()
+    return () => subscription?.unsubscribe()
   }, [])
 
   const signUp = async (email, password, userData) => {
-    try {
-      // Mock implementation
-      const mockUser = {
-        id: Date.now().toString(),
-        email,
-        ...userData,
-        role: 'user'
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: userData.name,
+        }
       }
-      localStorage.setItem('mockUser', JSON.stringify(mockUser))
-      setUser(mockUser)
-      return { user: mockUser, error: null }
-    } catch (error) {
-      return { user: null, error }
-    }
+    })
+    return { user: data.user, error }
   }
 
   const signIn = async (email, password) => {
-    try {
-      // Mock implementation - check for admin credentials
-      let mockUser
-      if (email === 'admin@shop.com' && password === 'admin123') {
-        mockUser = {
-          id: 'admin-1',
-          email,
-          role: 'admin',
-          name: 'Admin User'
-        }
-      } else {
-        mockUser = {
-          id: Date.now().toString(),
-          email,
-          role: 'user',
-          name: 'Demo User'
-        }
-      }
-      localStorage.setItem('mockUser', JSON.stringify(mockUser))
-      setUser(mockUser)
-      return { user: mockUser, error: null }
-    } catch (error) {
-      return { user: null, error }
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    return { user: data.user, error }
   }
 
   const signOut = async () => {
-    localStorage.removeItem('mockUser')
+    await supabase.auth.signOut()
     setUser(null)
   }
 

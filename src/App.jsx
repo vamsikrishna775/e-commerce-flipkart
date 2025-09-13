@@ -25,7 +25,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <Router>
-          <div className="min-h-screen bg-gray-50 flex flex-col">
+          <div className="min-h-screen flex flex-col">
             <Header />
             
             <main className="flex-1">
@@ -50,8 +50,9 @@ function App() {
               toastOptions={{
                 duration: 3000,
                 style: {
-                  background: '#363636',
-                  color: '#fff',
+                  background: '#1F2937',
+                  color: '#F9FAFB',
+                  border: '1px solid #374151',
                 },
               }}
             />
